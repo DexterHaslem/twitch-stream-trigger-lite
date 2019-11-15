@@ -5,10 +5,30 @@
 #define WINDOW_WIDTH 500
 #define WINDOW_HEIGHT 300
 
+#define ID_FILE_EXIT                    40001
+#define ID_ABOUT_LICENSES               40002
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
+	case WM_CREATE:
+	{
+		HMENU hMenu, hSubMenu;
+
+		hMenu = CreateMenu();
+
+		hSubMenu = CreatePopupMenu();
+		AppendMenu(hSubMenu, MF_STRING, ID_FILE_EXIT, "E&xit");
+		AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&File");
+
+		hSubMenu = CreatePopupMenu();
+		AppendMenu(hSubMenu, MF_STRING, ID_ABOUT_LICENSES, "&Licenses");
+		AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&About");
+
+		SetMenu(hwnd, hMenu);
+		break;
+	}
 	case WM_CLOSE:
 		DestroyWindow(hwnd);
 		break;
