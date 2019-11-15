@@ -1,0 +1,10 @@
+*.obj
+
+*.opendb
+*.user.sln
+.vs/
+
+Debug/
+Release/
+x64/
+
