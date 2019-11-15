@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <commctrl.h>
+#include <WinUser.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,18 +14,25 @@
 
 #include "cJSON.h"
 
+#define ACCOUNT_MAXLEN 16
+#define CMD_MAXLEN 128
+
+struct stream_trigger_serialize
+{
+	int num;
+	bool enabled;
+	char account[ACCOUNT_MAXLEN];
+	char cmd[CMD_MAXLEN];
+};
 
 struct stream_trigger
 {
-	bool enabled;
-	const char* account;
-	const char* cmd;
+	struct stream_trigger_serialize serialize;
+	HMENU enabledCheckboxId;
+	HWND hEditAccount;
+	HWND hEditCommand;
+	HWND hEnabledCheckbox;
+	HWND hStaticStatus;
 	bool is_online;
-};
-
-struct all_triggers
-{
-	struct stream_trigger trigger_one;
-	struct stream_trigger trigger_two;
-	struct stream_trigger trigger_three;
+	bool prev_online;
 };
