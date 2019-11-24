@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "id": "36276165888",
+      "user_id": "44426109",
+      "user_name": "RedBull",
+      "game_id": "461067",
+      "type": "live",
+      "title": "Red Bull Conquest Finals - UNIST - SFV:AE - TEKKEN 7",
+      "viewer_count": 12601,
+      "started_at": "2019-11-23T19:45:29Z",
+      "language": "en",
+      "thumbnail_url": "https://static-cdn.jtvnw.net/previews-ttv/live_user_redbull-{width}x{height}.jpg",
+      "tag_ids": [ "1eba3cfe-51cc-460a-8259-bc8bb987f904", "3280c8d8-64c0-45f7-aeaa-189928b0e82c", "6ea6bca4-4712-4ab9-a906-e3336a9d8039" ]
+    }
+  ],
+  "pagination": { "cursor": "eyJiIjpudWxsLCJhIjp7Ik9mZnNldCI6MX19" }
+}

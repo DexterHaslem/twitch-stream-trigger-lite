@@ -29,8 +29,14 @@
     <ClInclude Include="cJSON.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="main.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="trigger.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="twitch_api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test.json" />
   </ItemGroup>
 </Project>

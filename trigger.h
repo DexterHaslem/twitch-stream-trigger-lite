@@ -12,27 +12,30 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include "cJSON.h"
-
-#define ACCOUNT_MAXLEN 16
+#define TWITCH_ACCOUNT_MAXLEN 25
 #define CMD_MAXLEN 128
 
-struct stream_trigger_serialize
+struct stream_trigger_t
 {
 	int num;
 	bool enabled;
-	char account[ACCOUNT_MAXLEN];
+	char account[TWITCH_ACCOUNT_MAXLEN];
 	char cmd[CMD_MAXLEN];
-};
 
-struct stream_trigger
-{
-	struct stream_trigger_serialize serialize;
 	HMENU enabledCheckboxId;
 	HWND hEditAccount;
 	HWND hEditCommand;
 	HWND hEnabledCheckbox;
 	HWND hStaticStatus;
+
+	/* TODO: consider timestamp to debounce restarts */
+	bool first_check;
 	bool is_online;
 	bool prev_online;
+};
+
+struct stream_triggers_t
+{
+	struct stream_trigger_t *triggers;
+	size_t count;
 };
