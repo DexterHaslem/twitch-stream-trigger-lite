@@ -2,6 +2,7 @@
 
 *.opendb
 *.user.sln
+*.user
 .vs/
 
 Debug/
