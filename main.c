@@ -1,23 +1,26 @@
 #include "trigger.h"
 #include "twitch_api.h"
 
-#define WINDOW_TITLE ("Twitch Stream Trigger v2")
-#define WINDOW_CLASSNAME ("ST2")
-#define WINDOW_WIDTH (380)
-#define WINDOW_HEIGHT (550)
-#define POLL_TIMER_ID (1)
-#define API_POLL_MS (45 * 1000)
+#define WINDOW_TITLE		("Twitch Stream Trigger lite")
+#define WINDOW_CLASSNAME	("dmh-tstl")
+#define WINDOW_WIDTH		(380)
+#define WINDOW_HEIGHT		(550)
+#define POLL_TIMER_ID		(1)
+#define API_POLL_MS			(45 * 1000)
 
 
-#define ID_FILE_EXIT 40001
-#define ID_HELP_LICENSES 40002
-#define ID_HELP_ABOUT 40003
+#define ID_FILE_EXIT		40001
+#define ID_HELP_LICENSES	40002
+#define ID_HELP_ABOUT		40003
 
 static HWND hStatus;
 static struct stream_trigger_t* triggers;
 
 static void update_now()
 {
+	/* ensure triggers have latest ui state first. we do not handle messages */
+	triggers_update_from_ui();
+	
 	triggers_reset_online();
 
 	if (triggers_any_enabled())
@@ -141,23 +144,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case ID_HELP_ABOUT:
 			/* TODO: */
 			break;
-		default:
-		{
-			/* check if it was one of our trigger enable checkboxes */
-			for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
-			{
-				if ((HMENU)from == triggers[i].enabledCheckboxId)
-				{
-					if (HIWORD(wParam) == BN_CLICKED)
-					{
-						/* have to ask current state everytime */
-						bool enabled = SendDlgItemMessage(hwnd, from, BM_GETCHECK, 0, 0);
-						trigger_enable(&triggers[i], enabled);
-					}
-					break;
-				}
-			}
-		}
 		}
 		break;
 	}

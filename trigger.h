@@ -31,6 +31,9 @@ struct stream_trigger_t
 	bool first_check;
 	bool is_online;
 	bool prev_online;
+
+	/* debugging */
+	int poll_count;
 };
 
 void triggers_check(void);
@@ -43,3 +46,6 @@ void triggers_reset_online(void);
 void trigger_user_online(const char* user_name);
 struct stream_trigger_t* triggers_get(void);
 bool triggers_any_enabled(void);
+void triggers_update_from_ui(void);
+void triggers_copy_to_ui(void);
+
