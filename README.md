@@ -13,5 +13,7 @@ It's simple !
 1. Check 'enabled'
 1. Paste the full path to a batch to launch when a stream goes online.
 
+If you want to perform multiple actions for one stream just add as another trigger.
+
 Note if the stream is already online at first check, nothing will happen
 

@@ -8,31 +8,37 @@
 #define POLL_TIMER_ID (1)
 #define API_POLL_MS (45 * 1000)
 
-/* this coudl be dynamic but just hardcode enough for now */
-#define NUM_HARDCODED_TRIGGERS 4
 
 #define ID_FILE_EXIT 40001
 #define ID_HELP_LICENSES 40002
 #define ID_HELP_ABOUT 40003
 
 static HWND hStatus;
-struct stream_trigger_t triggers[NUM_HARDCODED_TRIGGERS];
+static struct stream_trigger_t* triggers;
 
-struct stream_triggers_t triggers_holder = {
-	.triggers = (struct stream_trigger_t *)triggers,
-	.count = NUM_HARDCODED_TRIGGERS};
+static void update_now()
+{
+	triggers_reset_online();
 
-void on_timer_expire(HWND hwnd, UINT msg, UINT_PTR timerId, DWORD dwTime)
+	if (triggers_any_enabled())
+	{
+		get_streams_status(triggers);
+
+		triggers_check();
+	}
+}
+
+void CALLBACK on_timer_expire(HWND hwnd, UINT msg, UINT_PTR timerId, DWORD dwTime)
 {	
-	get_streams_status(&triggers_holder);
+	update_now();
 }
 
 void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND owner)
 {
 	HINSTANCE hInstance = GetModuleHandle(NULL); // (HINSTANCE)GetWindowLong(owner, GWL_HINSTANCE);
 
-	char titlebuf[256];
-	sprintf_s(&titlebuf, 256, "Trigger %d", trigger->num);
+	char titlebuf[32];
+	sprintf_s(titlebuf, 32, "Trigger %d", trigger->num);
 
 	HWND hGroupBoxTrigger = CreateWindowEx(WS_EX_TRANSPARENT, WC_BUTTON, titlebuf,
 										   WS_CHILD | WS_VISIBLE | BS_GROUPBOX | WS_GROUP,
@@ -70,39 +76,6 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 	SendMessage(hEditAccount, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
 }
 
-static void restore_triggers()
-{
-}
-
-static void save_triggers()
-{
-}
-
-static void triggers_all(void (*fn)(struct stream_trigger_t *t))
-{
-	/* do this with triggers holder so its easier to change later*/
-	for (size_t i = 0; i < triggers_holder.count; ++i)
-	{
-		struct stream_trigger_t* trigger = &triggers_holder.triggers[i];
-		fn(trigger);
-	}
-}
-
-static void setup_triggers()
-{
-	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
-	{
-		/* NOTE: do not overlap resource ids if anything else gets added */
-		triggers[i].enabledCheckboxId = (HMENU)50000 + i;
-		triggers[i].num = i + 1;
-		triggers[i].enabled = i == 0;
-		triggers[i].first_check = true;
-		strcpy_s(triggers[i].account, TWITCH_ACCOUNT_MAXLEN, "RedBull");
-	}
-
-	/* TODO: restoration of account/cmd here */
-}
-
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
@@ -120,20 +93,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		hSubMenu = CreatePopupMenu();
 		AppendMenu(hSubMenu, MF_STRING, ID_FILE_EXIT, "E&xit");
-		AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&File");
+		AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT_PTR)hSubMenu, "&File");
 
 		hSubMenu = CreatePopupMenu();
 		AppendMenu(hSubMenu, MF_STRING, ID_HELP_LICENSES, "&Licenses");
 		AppendMenu(hSubMenu, MF_STRING, ID_HELP_ABOUT, "&About");
-		AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&Help");
+		AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT_PTR)hSubMenu, "&Help");
 
 		SetMenu(hwnd, hMenu);
 
 		hStatus = CreateWindowEx(0, STATUSCLASSNAME, NULL,
 								 WS_CHILD | WS_VISIBLE, 0, 0, 0, 0,
 								 hwnd, NULL, GetModuleHandle(NULL), NULL);
-
-		setup_triggers();
 
 		for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 		{
@@ -144,7 +115,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		SetTimer(hwnd, POLL_TIMER_ID, API_POLL_MS, on_timer_expire);
 
 		/* do an initial check for state */
-		get_streams_status(&triggers_holder);
+		update_now();
 		
 		break;
 	}
@@ -158,6 +129,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 	{
 		WORD from = LOWORD(wParam);
+			
 		switch (from)
 		{
 		case ID_FILE_EXIT:
@@ -174,13 +146,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			/* check if it was one of our trigger enable checkboxes */
 			for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 			{
-				if (from == triggers[i].enabledCheckboxId)
+				if ((HMENU)from == triggers[i].enabledCheckboxId)
 				{
 					if (HIWORD(wParam) == BN_CLICKED)
 					{
 						/* have to ask current state everytime */
 						bool enabled = SendDlgItemMessage(hwnd, from, BM_GETCHECK, 0, 0);
-						triggers[i].enabled = enabled;
+						trigger_enable(&triggers[i], enabled);
 					}
 					break;
 				}
@@ -220,6 +192,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 1;
 	}
 
+	/* important: create triggers before createwindow - wm create called before show,
+	 * causing confusing races in debugging */
+	triggers_init();
+	triggers = triggers_get();
+	
 	hwnd = CreateWindowEx(
 		WS_EX_CLIENTEDGE,
 		WINDOW_CLASSNAME,
@@ -234,7 +211,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				   MB_ICONEXCLAMATION | MB_OK);
 		return 1;
 	}
-
+	
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
 
@@ -244,5 +221,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		DispatchMessage(&msg);
 	}
 
-	return msg.wParam;
+	return 0;
 }

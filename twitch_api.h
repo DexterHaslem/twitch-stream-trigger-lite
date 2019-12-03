@@ -7,4 +7,4 @@
 #include "trigger.h"
 #include "cJSON.h"
 
-void get_streams_status(struct stream_triggers_t *triggers);
+void get_streams_status(struct stream_trigger_t *triggers);

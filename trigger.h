@@ -5,12 +5,11 @@
 #include <commctrl.h>
 #include <WinUser.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+
+/* this could be dynamic but just hardcode enough for now */
+#define NUM_HARDCODED_TRIGGERS 4
 
 #define TWITCH_ACCOUNT_MAXLEN 25
 #define CMD_MAXLEN 128
@@ -34,8 +33,13 @@ struct stream_trigger_t
 	bool prev_online;
 };
 
-struct stream_triggers_t
-{
-	struct stream_trigger_t *triggers;
-	size_t count;
-};
+void triggers_check(void);
+void triggers_restore(void);
+void triggers_save(void);
+void trigger_fire(struct stream_trigger_t* trigger);
+void triggers_init(void);
+void trigger_enable(struct stream_trigger_t* trigger, bool enabled);
+void triggers_reset_online(void);
+void trigger_user_online(const char* user_name);
+struct stream_trigger_t* triggers_get(void);
+bool triggers_any_enabled(void);

@@ -85,6 +85,7 @@
   <ItemGroup>
     <ClCompile Include="cJSON.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="trigger.c" />
     <ClCompile Include="twitch_api.c" />
   </ItemGroup>
   <ItemGroup>

@@ -41,7 +41,6 @@ static struct curl_write_stat curl_get_data = {0};
 static size_t get_stream_info_json(const char *url)
 {
 	curl_get_data.size = 0;
-	CURLcode res;
 
 	if (curl == NULL)
 	{
@@ -49,6 +48,7 @@ static size_t get_stream_info_json(const char *url)
 
 		curl = curl_easy_init();
 	}
+	
 	if (curl == NULL)
 	{
 		return -1;
@@ -66,7 +66,7 @@ static size_t get_stream_info_json(const char *url)
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curl_get_data);
 
-	res = curl_easy_perform(curl);
+	const CURLcode res = curl_easy_perform(curl);
 	/* Check for errors */
 	if (res != CURLE_OK)
 	{
@@ -80,57 +80,37 @@ static size_t get_stream_info_json(const char *url)
 	return curl_get_data.size;
 }
 
-static void build_request_url(struct stream_triggers_t *triggers, char *buf)
+static bool build_request_url(struct stream_trigger_t* triggers, char *buf)
 {
 	/* twitch api makes you repeat the same parameter which is kinda jank */
 	/* ?user_login=<1>&user_login=<2> .. */
 	memset(buf, 0, REQ_URL_BUF_SIZE);
 	strcpy_s(buf, REQ_URL_BUF_SIZE, BASE_REQUEST_URL);
 
+	char user_chunk[64] = { 0 };
 	bool first = true;
-	for (size_t i = 0; i < triggers->count; ++i)
+	bool got_any = false;
+	
+	for (size_t i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
-		struct stream_trigger_t *trigger = triggers->triggers + i;
+		struct stream_trigger_t *trigger = triggers + i;
 		if (!trigger->enabled || trigger->account[0] == '\0')
 		{
 			continue;
 		}
-		char user_chunk[64] = {0};
-
+		
+		got_any = true;
 		const char *format = first ? "%s" : "&user_login=%s";
 		first = false;
-		size_t written = snprintf(user_chunk, 64, format, (triggers->triggers + i)->account);
+		size_t written = snprintf(user_chunk, 64, format, trigger->account);
 		/* ouch: second param is size of DEST buffer max - not our written chunksz */
 		strcat_s(buf, REQ_URL_BUF_SIZE, user_chunk);
-
-		//strncat_s(buf, 64, user_chunk, 64);
 	}
+
+	return got_any;
 }
 
-static void reset_all_triggers_online(struct stream_triggers_t *triggers)
-{
-	for (size_t i = 0; i < triggers->count; ++i)
-	{
-		struct stream_trigger_t *trigger = triggers->triggers + i;
-		trigger->is_online = false;
-	}
-}
-
-static void try_set_trigger_online(struct stream_triggers_t *triggers, const char *user_name)
-{
-	for (size_t i = 0; i < triggers->count; ++i)
-	{
-		struct stream_trigger_t *trigger = triggers->triggers + i;
-
-		if (trigger->enabled && _strcmpi(trigger->account, user_name) == 0)
-		{
-			// const bool is_live = _strcmpi(type, "live") == 0;
-			trigger->is_online = true;
-		}
-	}
-}
-
-static void parse_json(struct stream_triggers_t *triggers, const char *json_str)
+void parse_json(const char *json_str)
 {
 	cJSON *json = cJSON_Parse(json_str);
 	if (json == NULL)
@@ -142,10 +122,7 @@ static void parse_json(struct stream_triggers_t *triggers, const char *json_str)
 		}
 	}
 	else
-	{
-		/* set all accounts offline, then re-set any present in data as live */
-		reset_all_triggers_online(triggers);
-
+	{			
 		struct cJSON* data_arr = cJSON_GetObjectItem(json, "data");
 		if (data_arr)
 		{
@@ -155,9 +132,8 @@ static void parse_json(struct stream_triggers_t *triggers, const char *json_str)
 			cJSON_ArrayForEach(twitch_account, data_arr)
 			{
 				cJSON* user_name = cJSON_GetObjectItem(twitch_account, "user_name");
-
 				/* dont bother checking type here, if its in list its live in some capacity */
-				try_set_trigger_online(triggers, user_name->valuestring);
+				trigger_user_online(user_name->valuestring);
 			}
 			
 			// ReSharper enable CppJoinDeclarationAndAssignment
@@ -165,9 +141,11 @@ static void parse_json(struct stream_triggers_t *triggers, const char *json_str)
 	}
 }
 
-void get_streams_status(struct stream_triggers_t *triggers)
+void get_streams_status(struct stream_trigger_t *triggers)
 {
-	build_request_url(triggers, req_buf);
-	size_t json_size = get_stream_info_json(req_buf);
-	parse_json(triggers, curl_get_data.memory);
+	if (build_request_url(triggers, req_buf))
+	{
+		size_t json_size = get_stream_info_json(req_buf);
+		parse_json(curl_get_data.memory);
+	}
 }
