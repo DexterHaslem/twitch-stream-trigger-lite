@@ -5,6 +5,9 @@
 #include <commctrl.h>
 #include <WinUser.h>
 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <string.h> 
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -37,7 +40,7 @@ struct stream_trigger_t
 };
 
 void triggers_check(void);
-void triggers_restore(void);
+bool triggers_restore(void);
 void triggers_save(void);
 void trigger_fire(struct stream_trigger_t* trigger);
 void triggers_init(void);

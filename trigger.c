@@ -1,5 +1,7 @@
 #include "trigger.h"
 
+#define SAVE_FILE_NAME "triggers.dat"
+
 static struct stream_trigger_t triggers[NUM_HARDCODED_TRIGGERS];
 
 struct stream_trigger_t* triggers_get()
@@ -12,6 +14,10 @@ void triggers_update_from_ui()
 {
 	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
+		/* zero out bufs so we dont end up serializing trailing data*/
+		memset(triggers[i].account, 0, TWITCH_ACCOUNT_MAXLEN);
+		memset(triggers[i].cmd, 0, CMD_MAXLEN);
+		
 		GetWindowText(triggers[i].hEditAccount, triggers[i].account, TWITCH_ACCOUNT_MAXLEN);
 		GetWindowText(triggers[i].hEditCommand, triggers[i].cmd, CMD_MAXLEN);
 
@@ -36,15 +42,42 @@ void triggers_copy_to_ui()
 }
 
 /* deserialize triggers into in mem bufs */
-void triggers_restore(void)
+bool triggers_restore(void)
 {
+	FILE* open_file;
+	const errno_t open_err = fopen_s(&open_file, SAVE_FILE_NAME, "r");
+	if (open_file == NULL || open_err != 0)
+	{
+		/* this is ok, might be first run */
+		return false;
+	}
+
+	/* this is again not update safe or portable. we should also ideally read to a temp
+	 * buffer instead incase anything goes wrong but caller will set default state anyway
+	 */
+	size_t elements_read = fread(&triggers, sizeof(struct stream_trigger_t),
+		NUM_HARDCODED_TRIGGERS, open_file);
 	
+	fclose(open_file);
+	return elements_read > 0;
 }
 
 /* serialize triggers */
 void triggers_save(void)
 {
+	FILE* save_file;
+	const errno_t open_err = fopen_s(&save_file, SAVE_FILE_NAME, "w");
+	if (save_file == NULL || open_err != 0)
+	{
+		/* TODO: win32 logging */
+		return;
+	}
 	
+	/* write structures as is, this is not portable and update safe */
+	size_t elements_written = fwrite(&triggers, sizeof(struct stream_trigger_t),
+		NUM_HARDCODED_TRIGGERS, save_file);
+	
+	fclose(save_file);
 }
 
 /* unconditionally fires a triggers command regardless of state */
@@ -83,7 +116,7 @@ void trigger_fire(struct stream_trigger_t* trigger)
 void triggers_check(void)
 {
 	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
-	{		
+	{
 		if (!triggers[i].enabled)
 		{
 			/* preserve first_check logic for disabled triggers, if enabled later .. */
@@ -103,19 +136,23 @@ void triggers_check(void)
 
 void triggers_init()
 {
-	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
+	memset(triggers, 0, sizeof(struct stream_trigger_t) * NUM_HARDCODED_TRIGGERS);
+	
+	const bool got_restored = triggers_restore();
+	if (!got_restored)
 	{
-		/* NOTE: do not overlap resource ids if anything else gets added */
-		triggers[i].enabledCheckboxId = (HMENU)50000 + i;
-		triggers[i].num = i + 1;
-		triggers[i].enabled = false;
-		triggers[i].first_check = true;
-		triggers[i].poll_count = 0;
-		strcpy_s(triggers[i].account, TWITCH_ACCOUNT_MAXLEN, "");
-		strcpy_s(triggers[i].cmd, CMD_MAXLEN, "");
+		for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
+		{
+			/* NOTE: do not overlap resource ids if anything else gets added */
+			triggers[i].enabledCheckboxId = (HMENU)50000 + i;
+			triggers[i].num = i + 1;
+			triggers[i].enabled = false;
+			triggers[i].first_check = true;
+			triggers[i].poll_count = 0;
+			strcpy_s(triggers[i].account, TWITCH_ACCOUNT_MAXLEN, "");
+			strcpy_s(triggers[i].cmd, CMD_MAXLEN, "");
+		}
 	}
-
-	/* TODO: restoration of account/cmd here */
 }
 
 void trigger_enable(struct stream_trigger_t* trigger, bool enabled)

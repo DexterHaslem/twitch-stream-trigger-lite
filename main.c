@@ -123,6 +123,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	case WM_CLOSE:
+		/* important! this needs to be done before destroyed (eg after message loop pump) */
+		triggers_update_from_ui();
+		triggers_save();
+		
 		KillTimer(hwnd, POLL_TIMER_ID);
 		DestroyWindow(hwnd);
 		break;
@@ -201,6 +205,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
 
+	/* show initial state */
+	triggers_copy_to_ui();
+	
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
 	{
 		TranslateMessage(&msg);

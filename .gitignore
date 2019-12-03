@@ -5,6 +5,7 @@
 *.user
 .vs/
 
+triggers.dat
 Debug/
 Release/
 x64/
