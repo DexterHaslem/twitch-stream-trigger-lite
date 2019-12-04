@@ -18,15 +18,21 @@
 #define TWITCH_ACCOUNT_MAXLEN 25
 
 /* win32 limit is 32k lmfao */
-#define CMD_MAXLEN 1024
+#define CMD_MAXLEN 2048
 
 /* structure to hold anything persisted outside of in-memory state */
 struct stream_trigger_persist_t
 {
-	int num; /* todo: consider removing */
+	unsigned int num; /* todo: consider removing */
 	bool enabled;
-	char account[TWITCH_ACCOUNT_MAXLEN];
-	char cmd[CMD_MAXLEN];
+	
+	size_t account_len;
+	const char* account;
+	
+	size_t cmd_len;
+	const char* cmd;
+
+	unsigned int pad;
 };
 
 struct stream_trigger_t
@@ -43,6 +49,10 @@ struct stream_trigger_t
 	bool first_check;
 	bool is_online;
 	bool prev_online;
+
+	/* account and cmd are persisted, but not written full length out */
+	char account[TWITCH_ACCOUNT_MAXLEN];
+	char cmd[CMD_MAXLEN];
 	
 	/* debugging */
 	int poll_count;

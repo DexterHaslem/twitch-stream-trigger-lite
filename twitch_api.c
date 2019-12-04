@@ -94,7 +94,7 @@ static bool build_request_url(struct stream_trigger_t* triggers, char *buf)
 	for (size_t i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
 		struct stream_trigger_t *trigger = triggers + i;
-		if (!trigger->persist.enabled || trigger->persist.account[0] == '\0')
+		if (!trigger->persist.enabled || trigger->account[0] == '\0')
 		{
 			continue;
 		}
@@ -102,7 +102,7 @@ static bool build_request_url(struct stream_trigger_t* triggers, char *buf)
 		got_any = true;
 		const char *format = first ? "%s" : "&user_login=%s";
 		first = false;
-		size_t written = snprintf(user_chunk, 64, format, trigger->persist.account);
+		size_t written = snprintf(user_chunk, 64, format, trigger->account);
 		/* ouch: second param is size of DEST buffer max - not our written chunksz */
 		strcat_s(buf, REQ_URL_BUF_SIZE, user_chunk);
 	}
@@ -122,7 +122,7 @@ void parse_json(const char *json_str)
 		}
 	}
 	else
-	{			
+	{
 		struct cJSON* data_arr = cJSON_GetObjectItem(json, "data");
 		if (data_arr)
 		{
