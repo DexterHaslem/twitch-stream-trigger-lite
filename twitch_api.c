@@ -61,7 +61,8 @@ static size_t get_stream_info_json(const char *url)
 	
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 
-	curl_get_data.memory = malloc(32);
+	curl_get_data.memory = malloc(1);
+	
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write);
@@ -76,7 +77,8 @@ static size_t get_stream_info_json(const char *url)
 	}
 
 	/* always cleanup */
-	curl_easy_cleanup(curl);
+	// curl_easy_cleanup(curl);
+	// curl_easy_upkeep(curl);
 
 	return curl_get_data.size;
 }
