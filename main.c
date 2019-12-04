@@ -19,6 +19,11 @@ static HWND hMain;
 static struct stream_trigger_t* triggers;
 static unsigned int api_poll_counter;
 
+static const char* licenses = "This program uses the following third party software\n\
+cJSON\n\
+curl\n\
+See THIRDPARTY_LICENSES in the source distrubution for full copies of licenses";
+
 static void update_state()
 {
 	/* ensure triggers have latest ui state first. we do not handle messages */
@@ -171,7 +176,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			PostMessage(hwnd, WM_CLOSE, 0, 0);
 			break;
 		case ID_HELP_LICENSES:
-			MessageBox(hwnd, "licenses", "About Licenses", MB_OK | MB_ICONERROR);
+			MessageBox(hwnd, licenses, "About Licenses", MB_OK | MB_ICONINFORMATION);
 			break;
 		case ID_HELP_ABOUT:
 			/* TODO: */
