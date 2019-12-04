@@ -45,10 +45,10 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 
 	/* NOTE: ui state is reflected from restored triggers after creation */
 	HWND hGroupBoxTrigger = CreateWindowEx(WS_EX_TRANSPARENT, WC_BUTTON, titlebuf,
-										   WS_CHILD | WS_VISIBLE | BS_GROUPBOX | WS_GROUP,
+										   WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
 										   5, start_y, 320, 100, owner, NULL, hInstance, NULL);
 
-	HWND hEnabled = CreateWindowEx(0, WC_BUTTON, "Enabled", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+	HWND hEnabled = CreateWindowEx(0, WC_BUTTON, "Enabled", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
 								   10, start_y + 15, 75, 25, owner, (HMENU)trigger->enabledCheckboxId, hInstance, NULL);
 	trigger->hEnabledCheckbox = hEnabled;
 
@@ -57,7 +57,7 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 										NULL, hInstance, NULL);
 
 	HWND hEditAccount = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, "Account here",
-									   WS_CHILD | WS_VISIBLE,
+									   WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 									   75, start_y + 40, 230, 25, owner, NULL, hInstance, NULL);
 	trigger->hEditAccount = hEditAccount;
 	SendMessage(hEditAccount, EM_SETLIMITTEXT, TWITCH_ACCOUNT_MAXLEN, 0);
@@ -67,7 +67,7 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 									NULL, hInstance, NULL);
 
 	HWND hEditCommandLine = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, "Command line here",
-										   WS_CHILD | WS_VISIBLE,
+										   WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 										   75, start_y + 70, 230, 25, owner, NULL, hInstance, NULL);
 	trigger->hEditCommand = hEditCommandLine;
 	SendMessage(hEditCommandLine, EM_SETLIMITTEXT, CMD_MAXLEN, 0);
@@ -209,11 +209,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	/* show initial state */
 	triggers_copy_to_ui();
+
 	
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
 	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		/* Translate virtual-key messages into character messages */
+		if (IsDialogMessage(hwnd, &msg) == 0)
+		{
+			TranslateMessage(&msg);
+			/* Send message to WindowProcedure */
+			DispatchMessage(&msg);
+		}
 	}
 
 	return 0;
