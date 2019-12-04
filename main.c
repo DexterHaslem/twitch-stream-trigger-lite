@@ -74,7 +74,7 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 										10, start_y + 45, 100, 25, owner,
 										NULL, hInstance, NULL);
 
-	HWND hEditAccount = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, "Account here",
+	HWND hEditAccount = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, "",
 									   WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 									   75, start_y + 40, 230, 25, owner, NULL, hInstance, NULL);
 	trigger->hEditAccount = hEditAccount;
@@ -84,7 +84,7 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 									10, start_y + 75, 100, 25, owner,
 									NULL, hInstance, NULL);
 
-	HWND hEditCommandLine = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, "Command line here",
+	HWND hEditCommandLine = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, "",
 										   WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 										   75, start_y + 70, 230, 25, owner, NULL, hInstance, NULL);
 	trigger->hEditCommand = hEditCommandLine;
