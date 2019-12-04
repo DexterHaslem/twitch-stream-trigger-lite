@@ -65,6 +65,9 @@ void triggers_copy_to_ui(HWND hMain)
 		WPARAM checked = triggers[i].persist.enabled ? BST_CHECKED : BST_UNCHECKED;
 		SendDlgItemMessage(hMain,
 			triggers[i].enabled_checkbox_id, BM_SETCHECK, checked, 0);
+
+		SetWindowText(triggers[i].hStaticStatus, triggers[i].first_check ? "Status: Unknown" :
+			triggers[i].is_online? "Status: Live" : "Status: Offline/invalid");
 	}
 }
 
@@ -167,6 +170,8 @@ void triggers_save(void)
 /* TODO: consider private usage. we never need direct use? */
 void trigger_fire(struct stream_trigger_t* trigger)
 {
+	++trigger->num_triggers;
+	
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
 
@@ -206,7 +211,7 @@ void triggers_check(void)
 			continue;
 		}
 		
-		if (triggers[i].is_online && !triggers[i].prev_online)
+		if (!triggers[i].first_check && triggers[i].is_online && !triggers[i].prev_online)
 		{
 			trigger_fire(&triggers[i]);
 		}

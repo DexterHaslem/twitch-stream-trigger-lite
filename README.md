@@ -17,3 +17,14 @@ If you want to perform multiple actions for one stream just add as another trigg
 
 Note if the stream is already online at first check, nothing will happen
 
+
+## FAQ
+
+> I have stupid settings, is there an easy way to reset?
+
+Just delete `triggers.dat`
+
+> The account trigger status is always 'offline/unknown'
+
+Check that the account name is correct
+

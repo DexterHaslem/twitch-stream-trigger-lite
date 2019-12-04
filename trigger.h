@@ -20,6 +20,8 @@
 /* win32 limit is 32k lmfao */
 #define CMD_MAXLEN 2048
 
+#define STATUS_MAXLEN 128
+
 /* structure to hold anything persisted outside of in-memory state */
 struct stream_trigger_persist_t
 {
@@ -53,9 +55,12 @@ struct stream_trigger_t
 	/* account and cmd are persisted, but not written full length out */
 	char account[TWITCH_ACCOUNT_MAXLEN];
 	char cmd[CMD_MAXLEN];
+
+	char status_str[STATUS_MAXLEN];
 	
 	/* debugging */
 	int poll_count;
+	int num_triggers;
 };
 
 void triggers_check(void);

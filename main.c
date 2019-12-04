@@ -31,7 +31,10 @@ static void update_state()
 		get_streams_status(triggers);
 
 		triggers_check();
-	}
+
+		/* once done, update ui again incase online/offline changed */
+		triggers_copy_to_ui(hMain);
+	}	
 }
 
 static void update_ui(HWND hwnd, UINT msg, UINT_PTR timerId, DWORD dwTime)
@@ -67,8 +70,12 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 										   5, start_y, 320, 100, owner, NULL, hInstance, NULL);
 
 	HWND hEnabled = CreateWindowEx(0, WC_BUTTON, "Enabled", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
-								   10, start_y + 15, 75, 25, owner, (HMENU)trigger->enabled_checkbox_id, hInstance, NULL);
-	//trigger->hEnabledCheckbox = hEnabled;
+								   10, start_y + 15, 75, 25, owner, (HMENU)trigger->enabled_checkbox_id, hInstance, NULL);	
+
+	HWND hStaticStatus = CreateWindowEx(0, WC_STATIC, "Status: ", WS_CHILD | WS_VISIBLE,
+		75, start_y + 20, 120, 20, owner, NULL, hInstance, NULL);
+	
+	trigger->hStaticStatus = hStaticStatus;
 
 	HWND hAccountLabel = CreateWindowEx(0, WC_STATIC, "Account:", WS_CHILD | WS_VISIBLE,
 										10, start_y + 45, 100, 25, owner,
@@ -88,6 +95,7 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 										   WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 										   75, start_y + 70, 230, 25, owner, NULL, hInstance, NULL);
 	trigger->hEditCommand = hEditCommandLine;
+	
 	SendMessage(hEditCommandLine, EM_SETLIMITTEXT, CMD_MAXLEN, 0);
 	
 	HFONT hfDefault = GetStockObject(DEFAULT_GUI_FONT);
@@ -97,6 +105,7 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 	SendMessage(hCmdLabel, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
 	SendMessage(hEditCommandLine, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
 	SendMessage(hEditAccount, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
+	SendMessage(hStaticStatus, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
