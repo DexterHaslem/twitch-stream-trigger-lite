@@ -36,7 +36,7 @@ static size_t curl_write(char *contents, size_t size, size_t nmemb, void *userda
 
 /* curl_global_cleanup(); */
 static CURL *curl = NULL;
-static struct curl_write_stat curl_get_data = {0};
+static struct curl_write_stat curl_get_data = { 0 };
 
 static size_t get_stream_info_json(const char *url)
 {
@@ -58,9 +58,10 @@ static size_t get_stream_info_json(const char *url)
 
 	header_chunk = curl_slist_append(header_chunk, TWITCH_API_CLIENT_ID_HEADER);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_chunk);
+	
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 
-	curl_get_data.memory = malloc(1);
+	curl_get_data.memory = malloc(32);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write);
@@ -102,7 +103,10 @@ static bool build_request_url(struct stream_trigger_t* triggers, char *buf)
 		got_any = true;
 		const char *format = first ? "%s" : "&user_login=%s";
 		first = false;
-		size_t written = snprintf(user_chunk, 64, format, trigger->account);
+		/* dont pass maxlen. this function is stupid as fuck and will go to len instead of strlen */
+		size_t acct_len = strlen(trigger->account);
+		char* acct_escaped = curl_easy_escape(curl, trigger->account, acct_len);
+		size_t written = snprintf(user_chunk, 64, format, acct_escaped);
 		/* ouch: second param is size of DEST buffer max - not our written chunksz */
 		strcat_s(buf, REQ_URL_BUF_SIZE, user_chunk);
 	}
@@ -148,4 +152,6 @@ void get_streams_status(struct stream_trigger_t *triggers)
 		size_t json_size = get_stream_info_json(req_buf);
 		parse_json(curl_get_data.memory);
 	}
+
+	free(curl_get_data.memory);
 }

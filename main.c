@@ -6,7 +6,8 @@
 #define WINDOW_WIDTH		(380)
 #define WINDOW_HEIGHT		(550)
 #define POLL_TIMER_ID		(1)
-#define API_POLL_MS			(45 * 1000)
+#define UI_UPDATE_MS		(500)
+#define API_POLL_UPDATES	(60) /* hit api every 60 ui updates, or 30 seconds */
 
 
 #define ID_FILE_EXIT		40001
@@ -16,8 +17,9 @@
 static HWND hStatus;
 static HWND hMain;
 static struct stream_trigger_t* triggers;
+static unsigned int api_poll_counter;
 
-static void update_now()
+static void update_state()
 {
 	/* ensure triggers have latest ui state first. we do not handle messages */
 	triggers_update_from_ui(hMain);
@@ -32,10 +34,25 @@ static void update_now()
 	}
 }
 
-void CALLBACK on_timer_expire(HWND hwnd, UINT msg, UINT_PTR timerId, DWORD dwTime)
-{	
-	update_now();
+static void update_ui(HWND hwnd, UINT msg, UINT_PTR timerId, DWORD dwTime)
+{
+	char status_text[256] = { 0 };
+	
+	if (api_poll_counter++ >= API_POLL_UPDATES)
+	{
+		update_state();
+		api_poll_counter = 0;
+		snprintf(status_text, 256, "Updating now");
+	}
+	else
+	{
+		int seconds_remaining = ((API_POLL_UPDATES - api_poll_counter) * UI_UPDATE_MS)/1000;
+		snprintf(status_text, 256, "Updating in %u seconds..", seconds_remaining);
+	}
+	
+	SetWindowText(hStatus, status_text);
 }
+
 
 void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND owner)
 {
@@ -118,7 +135,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 
 		/* start polling timer now */
-		SetTimer(hwnd, POLL_TIMER_ID, API_POLL_MS, on_timer_expire);
+		SetTimer(hwnd, POLL_TIMER_ID, UI_UPDATE_MS, update_ui);
 
 		/* do not do an initial check for state here, we do not have ui state restored yet*/
 		
@@ -230,7 +247,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	UpdateWindow(hMain);
 
 	/* kick off an update right away to get initial stream(s) state*/
-	update_now();
+	update_state();
 	
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
 	{

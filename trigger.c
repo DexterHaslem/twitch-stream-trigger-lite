@@ -1,9 +1,9 @@
 #include "trigger.h"
 #include <assert.h>
 
-#define CHECKBOX_ID_START 50500
-#define SAVE_FILE_NAME "triggers.dat"
-#define SAVE_PAD_MAGIC (0xCAFEBABE)
+#define CHECKBOX_ID_START	(50500)
+#define SAVE_FILE_NAME		"triggers.dat"
+#define SAVE_PAD_MAGIC		(0xCAFEBABE)
 
 /* stamp of version of save file, changing this will invalidate any previous save! only change when destructive
  * file format changes are done 
