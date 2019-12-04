@@ -15,11 +15,11 @@ void triggers_update_from_ui()
 	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
 		/* zero out bufs so we dont end up serializing trailing data*/
-		memset(triggers[i].account, 0, TWITCH_ACCOUNT_MAXLEN);
-		memset(triggers[i].cmd, 0, CMD_MAXLEN);
+		memset(triggers[i].persist.account, 0, TWITCH_ACCOUNT_MAXLEN);
+		memset(triggers[i].persist.cmd, 0, CMD_MAXLEN);
 		
-		GetWindowText(triggers[i].hEditAccount, triggers[i].account, TWITCH_ACCOUNT_MAXLEN);
-		GetWindowText(triggers[i].hEditCommand, triggers[i].cmd, CMD_MAXLEN);
+		GetWindowText(triggers[i].hEditAccount, triggers[i].persist.account, TWITCH_ACCOUNT_MAXLEN);
+		GetWindowText(triggers[i].hEditCommand, triggers[i].persist.cmd, CMD_MAXLEN);
 
 		bool enabled = SendDlgItemMessage(triggers[i].hEnabledCheckbox, 
 			triggers[i].enabledCheckboxId, BM_GETCHECK, 0, 0);
@@ -32,10 +32,10 @@ void triggers_copy_to_ui()
 {
 	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
-		SetWindowText(triggers[i].hEditAccount, triggers[i].account);
-		SetWindowText(triggers[i].hEditCommand, triggers[i].cmd);
+		SetWindowText(triggers[i].hEditAccount, triggers[i].persist.account);
+		SetWindowText(triggers[i].hEditCommand, triggers[i].persist.cmd);
 
-		WPARAM checked = triggers[i].enabled ? BST_CHECKED : BST_UNCHECKED;
+		WPARAM checked = triggers[i].persist.enabled ? BST_CHECKED : BST_UNCHECKED;
 		SendDlgItemMessage(triggers[i].hEnabledCheckbox,
 			triggers[i].enabledCheckboxId, BM_SETCHECK, checked, 0);
 	}
@@ -55,11 +55,16 @@ bool triggers_restore(void)
 	/* this is again not update safe or portable. we should also ideally read to a temp
 	 * buffer instead incase anything goes wrong but caller will set default state anyway
 	 */
-	size_t elements_read = fread(&triggers, sizeof(struct stream_trigger_t),
-		NUM_HARDCODED_TRIGGERS, open_file);
+	size_t total_restored = 0;
+	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
+	{
+		const size_t elements_read = fread(&triggers[i].persist, sizeof(struct stream_trigger_persist_t),
+			1, open_file);
+		total_restored += elements_read;
+	}
 	
 	fclose(open_file);
-	return elements_read > 0;
+	return total_restored == NUM_HARDCODED_TRIGGERS;
 }
 
 /* serialize triggers */
@@ -73,10 +78,14 @@ void triggers_save(void)
 		return;
 	}
 	
-	/* write structures as is, this is not portable and update safe */
-	size_t elements_written = fwrite(&triggers, sizeof(struct stream_trigger_t),
-		NUM_HARDCODED_TRIGGERS, save_file);
-	
+	size_t total_restored = 0;
+	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
+	{
+		/* write structures as is, this is not portable and update safe */
+		size_t elements_written = fwrite(&triggers[i].persist, sizeof(struct stream_trigger_persist_t),
+			1, save_file);
+		/* TODO error check save */
+	}
 	fclose(save_file);
 }
 
@@ -85,21 +94,21 @@ void triggers_save(void)
 void trigger_fire(struct stream_trigger_t* trigger)
 {
 	STARTUPINFO si;
-    PROCESS_INFORMATION pi;
+	PROCESS_INFORMATION pi;
 
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	 ZeroMemory(&pi, sizeof(pi));
 
 	/* TODO: error checking */
 	if (CreateProcess(NULL,
-		trigger->cmd,				// Command line
-		NULL,       // Process handle not inheritable
-		NULL,        // Thread handle not inheritable
+		trigger->persist.cmd,		// Command line
+		NULL,		// Process handle not inheritable
+		NULL,			// Thread handle not inheritable
 		FALSE,			// Set handle inheritance to FALSE
 		DETACHED_PROCESS,
 		NULL,						// Use parent's environment block
-		NULL,        // Use parent's starting directory 
+		NULL,				// Use parent's starting directory 
 		&si,						// Pointer to STARTUPINFO structure
 		&pi)) // Pointer to PROCESS_INFORMATION structure	
 	{
@@ -107,7 +116,7 @@ void trigger_fire(struct stream_trigger_t* trigger)
 		// WaitForSingleObject(pi.hProcess, INFINITE);
 	}
 
-	// Close process and thread handles. 
+	// Close process and thread handles.
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
 }
@@ -117,7 +126,7 @@ void triggers_check(void)
 {
 	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
-		if (!triggers[i].enabled)
+		if (!triggers[i].persist.enabled)
 		{
 			/* preserve first_check logic for disabled triggers, if enabled later .. */
 			continue;
@@ -145,19 +154,17 @@ void triggers_init()
 		{
 			/* NOTE: do not overlap resource ids if anything else gets added */
 			triggers[i].enabledCheckboxId = (HMENU)50000 + i;
-			triggers[i].num = i + 1;
-			triggers[i].enabled = false;
+			triggers[i].persist.num = i + 1;
+			triggers[i].persist.enabled = false;
 			triggers[i].first_check = true;
 			triggers[i].poll_count = 0;
-			strcpy_s(triggers[i].account, TWITCH_ACCOUNT_MAXLEN, "");
-			strcpy_s(triggers[i].cmd, CMD_MAXLEN, "");
 		}
 	}
 }
 
 void trigger_enable(struct stream_trigger_t* trigger, bool enabled)
 {
-	trigger->enabled = enabled;
+	trigger->persist.enabled = enabled;
 	if (!enabled)
 	{
 		trigger->first_check = true;
@@ -178,7 +185,7 @@ void trigger_user_online(const char* user_name)
 {
 	for (size_t i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
-		if (triggers[i].enabled && _strcmpi(triggers[i].account, user_name) == 0)
+		if (triggers[i].persist.enabled && _strcmpi(triggers[i].persist.account, user_name) == 0)
 		{
 			triggers[i].is_online = true;
 		}
@@ -189,7 +196,7 @@ bool triggers_any_enabled(void)
 {
 	for (size_t i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
-		if (triggers[i].enabled)
+		if (triggers[i].persist.enabled)
 		{
 			return true;
 		}

@@ -14,27 +14,36 @@
 /* this could be dynamic but just hardcode enough for now */
 #define NUM_HARDCODED_TRIGGERS 4
 
+/* according to old twitch api comments max is 25, min is 3 with some old accounts < 3 */
 #define TWITCH_ACCOUNT_MAXLEN 25
-#define CMD_MAXLEN 128
 
-struct stream_trigger_t
+/* win32 limit is 32k lmfao */
+#define CMD_MAXLEN 1024
+
+/* structure to hold anything persisted outside of in-memory state */
+struct stream_trigger_persist_t
 {
-	int num;
+	int num; /* todo: consider removing */
 	bool enabled;
 	char account[TWITCH_ACCOUNT_MAXLEN];
 	char cmd[CMD_MAXLEN];
+};
 
+struct stream_trigger_t
+{
 	HMENU enabledCheckboxId;
 	HWND hEditAccount;
 	HWND hEditCommand;
 	HWND hEnabledCheckbox;
 	HWND hStaticStatus;
 
-	/* TODO: consider timestamp to debounce restarts */
+	struct stream_trigger_persist_t persist;
+
+	/* in memory working state. doesnt need to be persisted */
 	bool first_check;
 	bool is_online;
 	bool prev_online;
-
+	
 	/* debugging */
 	int poll_count;
 };

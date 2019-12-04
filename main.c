@@ -41,13 +41,13 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 	HINSTANCE hInstance = GetModuleHandle(NULL); // (HINSTANCE)GetWindowLong(owner, GWL_HINSTANCE);
 
 	char titlebuf[32];
-	sprintf_s(titlebuf, 32, "Trigger %d", trigger->num);
+	sprintf_s(titlebuf, 32, "Trigger %d", trigger->persist.num);
 
+	/* NOTE: ui state is reflected from restored triggers after creation */
 	HWND hGroupBoxTrigger = CreateWindowEx(WS_EX_TRANSPARENT, WC_BUTTON, titlebuf,
 										   WS_CHILD | WS_VISIBLE | BS_GROUPBOX | WS_GROUP,
 										   5, start_y, 320, 100, owner, NULL, hInstance, NULL);
 
-	/* TODO: set initial checked to state */
 	HWND hEnabled = CreateWindowEx(0, WC_BUTTON, "Enabled", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
 								   10, start_y + 15, 75, 25, owner, (HMENU)trigger->enabledCheckboxId, hInstance, NULL);
 	trigger->hEnabledCheckbox = hEnabled;
@@ -60,7 +60,8 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 									   WS_CHILD | WS_VISIBLE,
 									   75, start_y + 40, 230, 25, owner, NULL, hInstance, NULL);
 	trigger->hEditAccount = hEditAccount;
-
+	SendMessage(hEditAccount, EM_SETLIMITTEXT, TWITCH_ACCOUNT_MAXLEN, 0);
+	
 	HWND hCmdLabel = CreateWindowEx(0, WC_STATIC, "Command:", WS_CHILD | WS_VISIBLE,
 									10, start_y + 75, 100, 25, owner,
 									NULL, hInstance, NULL);
@@ -69,7 +70,8 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 										   WS_CHILD | WS_VISIBLE,
 										   75, start_y + 70, 230, 25, owner, NULL, hInstance, NULL);
 	trigger->hEditCommand = hEditCommandLine;
-
+	SendMessage(hEditCommandLine, EM_SETLIMITTEXT, CMD_MAXLEN, 0);
+	
 	HFONT hfDefault = GetStockObject(DEFAULT_GUI_FONT);
 	SendMessage(hGroupBoxTrigger, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
 	SendMessage(hEnabled, WM_SETFONT, (WPARAM)hfDefault, MAKELPARAM(FALSE, 0));
