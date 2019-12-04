@@ -1,6 +1,7 @@
 #include "trigger.h"
 #include <assert.h>
 
+#define CHECKBOX_ID_START 50500
 #define SAVE_FILE_NAME "triggers.dat"
 #define SAVE_PAD_MAGIC (0xCAFEBABE)
 
@@ -34,7 +35,7 @@ static void update_persist(struct stream_trigger_t* trigger)
 }
 
 /* move ui state into trigger buffers state */
-void triggers_update_from_ui()
+void triggers_update_from_ui(HWND hMain)
 {
 	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
@@ -45,17 +46,16 @@ void triggers_update_from_ui()
 		GetWindowText(triggers[i].hEditAccount, triggers[i].account, TWITCH_ACCOUNT_MAXLEN);
 		GetWindowText(triggers[i].hEditCommand, triggers[i].cmd, CMD_MAXLEN);
 
-		bool enabled = SendDlgItemMessage(triggers[i].hEnabledCheckbox, 
-			triggers[i].enabledCheckboxId, BM_GETCHECK, 0, 0);
-
-		update_persist(&triggers[i]);
-		
+		bool enabled = SendDlgItemMessage(hMain,
+			triggers[i].enabled_checkbox_id, BM_GETCHECK, 0, 0);
+			
 		trigger_enable(&triggers[i], enabled);
+		update_persist(&triggers[i]);
 	}
 }
 
 /* move trigger memory buffers into ui controls */
-void triggers_copy_to_ui()
+void triggers_copy_to_ui(HWND hMain)
 {
 	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
 	{
@@ -63,8 +63,8 @@ void triggers_copy_to_ui()
 		SetWindowText(triggers[i].hEditCommand, triggers[i].cmd);
 
 		WPARAM checked = triggers[i].persist.enabled ? BST_CHECKED : BST_UNCHECKED;
-		SendDlgItemMessage(triggers[i].hEnabledCheckbox,
-			triggers[i].enabledCheckboxId, BM_SETCHECK, checked, 0);
+		SendDlgItemMessage(hMain,
+			triggers[i].enabled_checkbox_id, BM_SETCHECK, checked, 0);
 	}
 }
 
@@ -217,22 +217,30 @@ void triggers_check(void)
 	}
 }
 
+static void triggers_reset()
+{
+	for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
+	{
+		/* NOTE: do not overlap resource ids if anything else gets added */
+		triggers[i].enabled_checkbox_id = (HMENU)(CHECKBOX_ID_START + i);
+		triggers[i].persist.num = i + 1;
+		triggers[i].persist.enabled = false;
+		triggers[i].first_check = true;
+		triggers[i].poll_count = 0;
+	}
+}
+/* creates triggers, restores and updates ui to reflect. must be called after ui creation */
 void triggers_init()
 {
 	memset(triggers, 0, sizeof(struct stream_trigger_t) * NUM_HARDCODED_TRIGGERS);
-	
+
+	/* always do this, we need good checkbox id*/
+	triggers_reset();
 	const bool got_restored = triggers_restore();
 	if (!got_restored)
 	{
-		for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
-		{
-			/* NOTE: do not overlap resource ids if anything else gets added */
-			triggers[i].enabledCheckboxId = (HMENU)50000 + i;
-			triggers[i].persist.num = i + 1;
-			triggers[i].persist.enabled = false;
-			triggers[i].first_check = true;
-			triggers[i].poll_count = 0;
-		}
+		/* reset again incase partial reads */
+		triggers_reset();
 	}
 }
 

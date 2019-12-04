@@ -37,10 +37,10 @@ struct stream_trigger_persist_t
 
 struct stream_trigger_t
 {
-	HMENU enabledCheckboxId;
+	HMENU enabled_checkbox_id;
 	HWND hEditAccount;
 	HWND hEditCommand;
-	HWND hEnabledCheckbox;
+	// HWND hEnabledCheckbox;
 	HWND hStaticStatus;
 
 	struct stream_trigger_persist_t persist;
@@ -68,6 +68,6 @@ void triggers_reset_online(void);
 void trigger_user_online(const char* user_name);
 struct stream_trigger_t* triggers_get(void);
 bool triggers_any_enabled(void);
-void triggers_update_from_ui(void);
-void triggers_copy_to_ui(void);
+void triggers_update_from_ui(HWND hMain);
+void triggers_copy_to_ui(HWND hMain);
 

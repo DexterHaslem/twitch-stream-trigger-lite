@@ -14,12 +14,13 @@
 #define ID_HELP_ABOUT		40003
 
 static HWND hStatus;
+static HWND hMain;
 static struct stream_trigger_t* triggers;
 
 static void update_now()
 {
 	/* ensure triggers have latest ui state first. we do not handle messages */
-	triggers_update_from_ui();
+	triggers_update_from_ui(hMain);
 	
 	triggers_reset_online();
 
@@ -49,8 +50,8 @@ void create_trigger_group(struct stream_trigger_t *trigger, int start_y, HWND ow
 										   5, start_y, 320, 100, owner, NULL, hInstance, NULL);
 
 	HWND hEnabled = CreateWindowEx(0, WC_BUTTON, "Enabled", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
-								   10, start_y + 15, 75, 25, owner, (HMENU)trigger->enabledCheckboxId, hInstance, NULL);
-	trigger->hEnabledCheckbox = hEnabled;
+								   10, start_y + 15, 75, 25, owner, (HMENU)trigger->enabled_checkbox_id, hInstance, NULL);
+	//trigger->hEnabledCheckbox = hEnabled;
 
 	HWND hAccountLabel = CreateWindowEx(0, WC_STATIC, "Account:", WS_CHILD | WS_VISIBLE,
 										10, start_y + 45, 100, 25, owner,
@@ -119,14 +120,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		/* start polling timer now */
 		SetTimer(hwnd, POLL_TIMER_ID, API_POLL_MS, on_timer_expire);
 
-		/* do an initial check for state */
-		update_now();
+		/* do not do an initial check for state here, we do not have ui state restored yet*/
 		
 		break;
 	}
 	case WM_CLOSE:
 		/* important! this needs to be done before destroyed (eg after message loop pump) */
-		triggers_update_from_ui();
+		triggers_update_from_ui(hMain);
 		triggers_save();
 		
 		KillTimer(hwnd, POLL_TIMER_ID);
@@ -150,6 +150,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case ID_HELP_ABOUT:
 			/* TODO: */
 			break;
+		default:
+		{
+#if 0
+			/* UGH: you *have to do this here* - trying to ask for getcheck later will not update */
+			/* check if it was one of our trigger enable checkboxes */
+			for (int i = 0; i < NUM_HARDCODED_TRIGGERS; ++i)
+			{
+				if ((HMENU)from == triggers[i].enabled_checkbox_id)
+				{
+					if (HIWORD(wParam) == BN_CLICKED)
+					{
+						/* have to ask current state everytime */
+						bool enabled = SendDlgItemMessage(hwnd, from, BM_GETCHECK, 0, 0);
+						trigger_enable(&triggers[i], enabled);
+					}
+					break;
+				}
+			}
+#endif
+		}
 		}
 		break;
 	}
@@ -162,7 +182,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	WNDCLASSEX wc;
-	HWND hwnd;
 	MSG msg;
 
 	wc.cbSize = sizeof(WNDCLASSEX);
@@ -189,7 +208,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	triggers_init();
 	triggers = triggers_get();
 	
-	hwnd = CreateWindowEx(
+	hMain = CreateWindowEx(
 		WS_EX_CLIENTEDGE,
 		WINDOW_CLASSNAME,
 		WINDOW_TITLE,
@@ -197,24 +216,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		CW_USEDEFAULT, CW_USEDEFAULT, WINDOW_WIDTH, WINDOW_HEIGHT,
 		NULL, NULL, hInstance, NULL);
 
-	if (hwnd == NULL)
+	if (hMain == NULL)
 	{
 		MessageBox(NULL, "Window Creation Failed!", "Error!",
 				   MB_ICONEXCLAMATION | MB_OK);
 		return 1;
 	}
+
+	/* show initial state. this is safe, controls have been created by WM_CREATE */
+	triggers_copy_to_ui(hMain);
 	
-	ShowWindow(hwnd, nCmdShow);
-	UpdateWindow(hwnd);
+	ShowWindow(hMain, nCmdShow);
+	UpdateWindow(hMain);
 
-	/* show initial state */
-	triggers_copy_to_ui();
-
+	/* kick off an update right away to get initial stream(s) state*/
+	update_now();
 	
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
 	{
 		/* Translate virtual-key messages into character messages */
-		if (IsDialogMessage(hwnd, &msg) == 0)
+		if (IsDialogMessage(hMain, &msg) == 0)
 		{
 			TranslateMessage(&msg);
 			/* Send message to WindowProcedure */
